@@ -36,18 +36,11 @@ const food = {
     }
 }
 
-const displayFood = () => {
-    /*
-    29 because we need a number between 0-580(see cvs height and width) 
-    so random generate number between 0 and 1 multiplaying it by 29 gives us a number between 0 and 29
-    (int because of math.floor) and multiplying by 20 gives a multiple of 20 b/w 0 - 580
-    */ 
-    
+const displayFood = () => {    
     ctx.fillStyle = 'red';
     ctx.fillRect(food.position.x,food.position.y,tileSize,tileSize);
 }
 
-let flag = true;
 
 setInterval(() => {
     
