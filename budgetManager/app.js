@@ -21,7 +21,20 @@ const budgetController = (() => {
         totals : {
             exp : 0,
             inc : 0
-        }
+        },
+        budget = 0,
+        percentage = -1
+    }
+
+
+    const calculateTotal = (type) => {
+        let sum = 0
+
+        data.allItems[type].forEach( item => {
+            sum += item.value
+        })
+
+        data.totals[type] = sum
     }
 
     return {
@@ -48,6 +61,41 @@ const budgetController = (() => {
             return newItem
         },
 
+        calculateBudget: () => {
+            //calculate total income and expenses
+            calculateTotal('exp')
+
+            calculateTotal('inc')
+
+            //calculate budget : income - expenses
+            data.budget = data.totals.inc - data.totals.exp
+
+            //calculate the percentage of income that we spent
+            if(data.totals.inc > 0) {
+                data.percentage = Math.round((data.totals.exp / data.totals.inc) * 100)
+            }
+            else{
+                data.percentage = -1
+            }
+            
+
+
+            console.log(data.totals.exp)
+        },
+
+        getBudget : () => {
+            return {
+                budget : data.budget,
+                totalInc : data.totals.inc,
+                totalExp : data.totals.exp,
+                percentage : data.percentage
+            }
+        },
+
+
+        testing : () =>{
+            console.table(data)
+        }
     }
 
 })()
@@ -82,7 +130,7 @@ const UIController = (() => {
             return {
                 type: document.querySelector(DOMstrings.inputType).value,
                 description : document.querySelector(DOMstrings.inputDescription).value,
-                value : document.querySelector(DOMstrings.inputValue).value
+                value : parseFloat(document.querySelector(DOMstrings.inputValue).value)
             }
         },
 
@@ -127,6 +175,13 @@ const UIController = (() => {
             fieldsArr[0].focus()
         },
 
+        displayBudget = (obj) => {
+            document.querySelector(DOMstrings.budgetLabel).textContent = obj.budget
+            document.querySelector(DOMstrings.incomeLabel).textContent = obj.totalInc
+            document.querySelector(DOMstrings.expensesLabel).textContent = obj.totalExp
+            document.querySelector(DOMstrings.percentageLabel).textContent = obj.percentage
+        },
+
         getDOMstrings: () =>  DOMstrings
     }
 })()
@@ -153,25 +208,36 @@ const controller = ((budgetCtrl , UICtrl)=>{
 
     }
 
-    
+    const updateBudget = () => {
+        //calculate the budget
+        budgetCtrl.calculateBudget()
+
+        //return budget
+        const budget = budgetCtrl.getBudget()
+
+        //display the budget in the UI
+        UICtrl.displayBudget(budget) 
+    }    
 
     const ctrlAddItem = () => {
         
         //Get input field data
         const {type , description, value} = UICtrl.getInput()
 
-        //Add item to budget controller
-        const newItem =  budgetCtrl.addItem(type , description, value)
 
-        //Add Item to the UI
-        UICtrl.addListItem(newItem , type)
+        if(description !== '' && !isNaN(value)  &&  value > 0){
+            //Add item to budget controller
+            const newItem =  budgetCtrl.addItem(type , description, value)
 
-        UICtrl.clearFields()
+            //Add Item to the UI
+            UICtrl.addListItem(newItem , type)
 
-        //calculate the budget
+            UICtrl.clearFields()
 
+            //calculate and update budget
+            updateBudget()
+        }
 
-        //display the budget in the UI
 
     }
 
