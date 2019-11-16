@@ -22,8 +22,8 @@ const budgetController = (() => {
             exp : 0,
             inc : 0
         },
-        budget = 0,
-        percentage = -1
+        budget : 0,
+        percentage : -1
     }
 
 
@@ -78,9 +78,6 @@ const budgetController = (() => {
                 data.percentage = -1
             }
             
-
-
-            console.log(data.totals.exp)
         },
 
         getBudget : () => {
