@@ -61,6 +61,18 @@ const budgetController = (() => {
             return newItem
         },
 
+        deleteItem : (type ,id) => {
+            const ids = data.allItems[type].map(current => {
+                return current.id
+            })
+
+            const index = ids.indexOf(id)
+
+            if(index > -1){
+                data.allItems[type].splice(index,1)    
+            }
+        },
+
         calculateBudget: () => {
             //calculate total income and expenses
             calculateTotal('exp')
@@ -140,13 +152,13 @@ const UIController = (() => {
 
                 element = DOMstrings.incomeContainer
 
-                html = '<div class="item clearfix" id="income-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>'
+                html = '<div class="item clearfix" id="inc-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>'
             }
             else{
 
                 element = DOMstrings.expensesContainer
 
-                html = '<div class="item clearfix" id="expense-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>'
+                html = '<div class="item clearfix" id="exp-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>'
             }
             //Replace placeholder with some actual data
             let newHtml = html.replace('%id%',obj.id)
@@ -158,6 +170,12 @@ const UIController = (() => {
 
             //insert HTML into the dome
             document.querySelector(element).insertAdjacentHTML('beforeend',newHtml)
+        },
+
+        deleteListItem: (id) => {
+            const selectorID = document.getElementById(id)
+
+            selectorID.parentNode.removeChild(selectorID)
         },
 
         clearFields : () => {
@@ -172,11 +190,18 @@ const UIController = (() => {
             fieldsArr[0].focus()
         },
 
-        displayBudget = (obj) => {
+        displayBudget : (obj) => {
+            
             document.querySelector(DOMstrings.budgetLabel).textContent = obj.budget
             document.querySelector(DOMstrings.incomeLabel).textContent = obj.totalInc
             document.querySelector(DOMstrings.expensesLabel).textContent = obj.totalExp
-            document.querySelector(DOMstrings.percentageLabel).textContent = obj.percentage
+
+            if(obj.percentage > -1){
+                document.querySelector(DOMstrings.percentageLabel).textContent = obj.percentage + '%'
+            }
+            else{
+                document.querySelector(DOMstrings.percentageLabel).textContent = '---'
+            }
         },
 
         getDOMstrings: () =>  DOMstrings
@@ -203,7 +228,10 @@ const controller = ((budgetCtrl , UICtrl)=>{
             }
         })
 
+        document.querySelector(DOM.container).addEventListener('click',ctrlDeleteItem);
+
     }
+
 
     const updateBudget = () => {
         //calculate the budget
@@ -238,10 +266,39 @@ const controller = ((budgetCtrl , UICtrl)=>{
 
     }
 
+    const ctrlDeleteItem = (event) => {
+
+        //I know this is hard coded :v
+        const itemID = event.target.parentNode.parentNode.parentNode.parentNode.id
+
+        if(itemID){
+            const splitID = itemID.split('-')
+
+            const type = splitID[0]
+
+            const id = parseInt(splitID[1])
+
+
+            console.log(type,id)
+            //delete item from ds
+            budgetCtrl.deleteItem(type , id) 
+            //delete item from UI
+            UICtrl.deleteListItem(itemID)
+
+            //update and show new budget
+            updateBudget()
+        }
+    }
 
     return {
         init : () => {
             setUpEventListeners()
+            UICtrl.displayBudget({
+                budget : 0,
+                totalInc : 0,
+                totalExp : 0,
+                percentage : -1
+            })
         }
     }    
 
