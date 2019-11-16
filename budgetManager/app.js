@@ -5,6 +5,19 @@ const budgetController = (() => {
         this.id = id
         this.description = description
         this.value = value
+        this.percentage = -1
+    }
+
+    Expenses.prototype.calcPercentage = function(totalIncome){
+        if(totalIncome > 0){
+            this.percentage = Math.round((this.value / totalIncome) * 100)
+        }else{
+            this.percentage = -1
+        }
+    }
+
+    Expenses.prototype.getPercentage = function(){
+        return this.percentage
     }
 
     const Income = function(id, description, value) {
@@ -92,6 +105,18 @@ const budgetController = (() => {
             
         },
 
+        calculatePercentages : () => {
+            data.allItems.exp.forEach(item => {
+                item.calcPercentage(data.totals.inc)
+            })
+        },
+
+        getPercentages : () => {
+            const percentages = data.allItems.exp.map(item => {return item.getPercentage()})
+
+            return percentages
+        },
+
         getBudget : () => {
             return {
                 budget : data.budget,
@@ -132,7 +157,21 @@ const UIController = (() => {
         dateLabel: '.budget__title--month'
     }
 
+    const formatNumber = (num ,type) => {
+        num = Math.abs(num)
 
+        num = num.toFixed(2)
+
+        const numSplit = num.toLocaleString('en')
+        
+        return (type === 'exp' ? '-' : '+') + ' ' + numSplit
+    }
+
+    const nodeListForEach = (list , callback) => {
+        for(let i = 0 ; i < list.length ; i++){
+            callback(list[i],i)
+        }
+    }
 
     return {
         getInput: () => {
@@ -158,17 +197,17 @@ const UIController = (() => {
 
                 element = DOMstrings.expensesContainer
 
-                html = '<div class="item clearfix" id="exp-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>'
+                html = '<div class="item clearfix" id="exp-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__percentage"></div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>'
             }
             //Replace placeholder with some actual data
             let newHtml = html.replace('%id%',obj.id)
 
             newHtml = newHtml.replace('%description%',obj.description)
 
-            newHtml = newHtml.replace('%value%',obj.value)
+            newHtml = newHtml.replace('%value%',formatNumber(obj.value , type))
 
 
-            //insert HTML into the dome
+            //insert HTML into the dom
             document.querySelector(element).insertAdjacentHTML('beforeend',newHtml)
         },
 
@@ -192,9 +231,9 @@ const UIController = (() => {
 
         displayBudget : (obj) => {
             
-            document.querySelector(DOMstrings.budgetLabel).textContent = obj.budget
-            document.querySelector(DOMstrings.incomeLabel).textContent = obj.totalInc
-            document.querySelector(DOMstrings.expensesLabel).textContent = obj.totalExp
+            document.querySelector(DOMstrings.budgetLabel).textContent = formatNumber(obj.budget , 'inc')
+            document.querySelector(DOMstrings.incomeLabel).textContent = formatNumber(obj.totalInc,'inc')
+            document.querySelector(DOMstrings.expensesLabel).textContent = formatNumber(obj.totalExp,'exp')
 
             if(obj.percentage > -1){
                 document.querySelector(DOMstrings.percentageLabel).textContent = obj.percentage + '%'
@@ -203,6 +242,44 @@ const UIController = (() => {
                 document.querySelector(DOMstrings.percentageLabel).textContent = '---'
             }
         },
+
+
+        displayPercentages: (percentages) => {   //array
+
+
+            const fields = document.querySelectorAll(DOMstrings.expensesPercLabel)
+
+
+            nodeListForEach(fields , (current , index) => {
+                if(percentages[index] > 0){
+                    current.textContent = percentages[index] + '%'
+                }else{
+                    current.textContent = '---'
+                }
+            })
+        },
+
+        displayDate:() => {
+            const now = new Date()
+
+            const year = now.getFullYear()
+
+            document.querySelector(DOMstrings.dateLabel).textContent = year
+            
+            
+        },
+
+        toggleTheme:() => {
+            const fields = document.querySelectorAll(DOMstrings.inputType + ',' + DOMstrings.inputValue + ',' + DOMstrings.inputDescription)
+
+            nodeListForEach(fields , (current , index) => {
+                current.classList.toggle('red-focus')
+
+            })
+
+            document.querySelector(DOMstrings.inputBtn).classList.toggle('red')
+        },
+        
 
         getDOMstrings: () =>  DOMstrings
     }
@@ -230,6 +307,8 @@ const controller = ((budgetCtrl , UICtrl)=>{
 
         document.querySelector(DOM.container).addEventListener('click',ctrlDeleteItem);
 
+    
+        document.querySelector(DOM.inputType).addEventListener('change',UICtrl.toggleTheme)
     }
 
 
@@ -243,6 +322,19 @@ const controller = ((budgetCtrl , UICtrl)=>{
         //display the budget in the UI
         UICtrl.displayBudget(budget) 
     }    
+
+    const updatePercentage = () => {
+        //calculate percentages 
+        budgetCtrl.calculatePercentages()
+
+        //read percentages from budget controller
+        const percentages = budgetCtrl.getPercentages()
+
+        //update UI with new percentages
+        UICtrl.displayPercentages(percentages)
+
+         
+    }
 
     const ctrlAddItem = () => {
         
@@ -261,6 +353,10 @@ const controller = ((budgetCtrl , UICtrl)=>{
 
             //calculate and update budget
             updateBudget()
+
+            //calculate and update percentages
+            updatePercentage()
+
         }
 
 
@@ -279,7 +375,6 @@ const controller = ((budgetCtrl , UICtrl)=>{
             const id = parseInt(splitID[1])
 
 
-            console.log(type,id)
             //delete item from ds
             budgetCtrl.deleteItem(type , id) 
             //delete item from UI
@@ -287,8 +382,13 @@ const controller = ((budgetCtrl , UICtrl)=>{
 
             //update and show new budget
             updateBudget()
+
+            //update and percentages
+            updatePercentage()
         }
     }
+
+    
 
     return {
         init : () => {
@@ -299,6 +399,7 @@ const controller = ((budgetCtrl , UICtrl)=>{
                 totalExp : 0,
                 percentage : -1
             })
+            UICtrl.displayDate()
         }
     }    
 
